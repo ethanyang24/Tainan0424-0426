@@ -28,6 +28,8 @@
   <style>
     body { background-color: #f7f6f2; -webkit-tap-highlight-color: transparent; font-family: 'Noto Sans TC', sans-serif; }
     [v-cloak] { display: none; }
+    .img-zoom-enter-active, .img-zoom-leave-active { transition: opacity 0.3s ease; }
+    .img-zoom-enter-from, .img-zoom-leave-to { opacity: 0; }
   </style>
 </head>
 <body class="text-muji-text antialiased">
@@ -88,14 +90,25 @@
             
             <div v-if="event.images && event.images.length > 0" class="flex flex-col gap-2">
               <img v-for="(img, imgIndex) in event.images" :key="imgIndex" :src="img" 
-                   class="w-full h-auto block object-cover rounded-sm border border-muji-border" 
+                   @click="zoomImg(img)"
+                   class="w-full h-auto block object-cover rounded-sm border border-muji-border cursor-zoom-in" 
                    loading="lazy" alt="行程圖片">
             </div>
           </div>
-
         </div>
       </div>
     </main>
+
+    <transition name="img-zoom">
+      <div v-if="zoomedImg" @click="zoomedImg = null" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+        <img :src="zoomedImg" class="max-w-full max-h-full object-contain shadow-2xl" alt="放大圖片">
+        <button class="absolute top-6 right-6 text-white/70">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </transition>
   </div>
 
   <script>
@@ -103,8 +116,8 @@
     createApp({
       setup() {
         const activeTab = ref(0)
+        const zoomedImg = ref(null)
         
-        // 將原本的 image 升級成 images 陣列，並加入 isOpen 控制展開狀態
         const itinerary = ref([
           {
             date: '4/24', dayOfWeek: '五',
@@ -130,7 +143,15 @@
                 ],
                 isOpen: false
               },
-              { time: '23:00', title: '阿杰溫體牛肉湯', isLocation: true, mapQuery: '阿杰溫體牛肉湯 台南', notes: '記得點大碗的，湯頭很鮮！', isOpen: false },
+              { 
+                time: '23:00', title: '阿杰溫體牛肉湯', isLocation: true, mapQuery: '阿杰溫體牛肉湯 台南', 
+                notes: '直接點上等部位大碗牛肉湯！',
+                images: [
+                  'https://letsplay.tw/wp-content/uploads/2024/12/1P6A6173.jpg',
+                  'https://letsplay.tw/wp-content/uploads/2024/12/1P6A6174.jpg'
+                ],
+                isOpen: false 
+              },
               { time: '23:30', title: '搭車返家', isLocation: false },
               { time: '24:00', title: '溫暖的家', isLocation: false }
             ]
@@ -139,19 +160,19 @@
             date: '4/25', dayOfWeek: '六',
             events: [
               { time: '10:00', title: '起床', isLocation: false },
-              { time: '10:20', title: '好鄰．食作', isLocation: true, mapQuery: '好鄰．食作', notes: '吃早餐，推薦手作麵包系列。', isOpen: false },
+              { time: '10:20', title: '好鄰．食作', isLocation: true, mapQuery: '好鄰．食作 台南' },
               { time: '12:00', title: '前往官田遊客中心', isLocation: false },
-              { 
-                time: '13:00', title: '抵達會場', isLocation: true, mapQuery: '官田遊客中心',
-                notes: '草地音樂節會場，建議帶野餐墊。',
-                images: ['https://images.unsplash.com/photo-1505933383163-e3832bd7232e?w=500&q=80'],
-                isOpen: false 
-              },
+              { time: '13:00', title: '抵達會場', isLocation: true, mapQuery: '官田遊客中心' },
               { time: '14:00', title: '逛市集、主舞台表演', isLocation: false },
-              { time: '18:30', title: '熱氣球光雕秀', isLocation: false, notes: '光雕秀時間約 30 分鐘，記得卡位。', isOpen: false },
-              { time: '20:00', title: '離開會場', isLocation: false },
-              { time: '21:00', title: '溫暖的家', isLocation: false },
-              { time: '21:10', title: '全聯購買食材', isLocation: true, mapQuery: '全聯福利中心' }
+              { time: '18:30', title: '熱氣球光雕秀', isLocation: false },
+              { time: '19:30', title: '離開會場', isLocation: false },
+              { 
+                time: '21:00', title: '山川序足體養生會館（民生旗艦館）', isLocation: true, mapQuery: '山川序足體養生會館 民生旗艦館',
+                notes: '走了一天，來個身心靈放鬆：）',
+                images: ['https://ibb.co/rfwLMSNp'],
+                isOpen: false
+              },
+              { time: '22:30', title: '溫暖的家', isLocation: false }
             ]
           },
           {
@@ -161,7 +182,7 @@
               { time: '10:20', title: '出門上課', isLocation: false },
               { time: '11:00', title: 'B.P.Y. 220 台南旗艦店', isLocation: true, mapQuery: 'B.P.Y. 220 台南旗艦店' },
               { time: '12:00', title: '下課', isLocation: false },
-              { time: '13:00', title: 'L’Amour', isLocation: true, mapQuery: 'L’Amour 台南', notes: '舒芙蕾下午茶。', isOpen: false },
+              { time: '13:00', title: 'L’Amour', isLocation: true, mapQuery: 'L’Amour 台南' },
               { time: '15:00', title: '誠品生活台南店', isLocation: true, mapQuery: '誠品生活台南店' },
               { time: '19:30', title: '台南運河水岸燈光秀', isLocation: true, mapQuery: '台南運河' },
               { time: '20:00', title: '返家', isLocation: false },
@@ -171,9 +192,10 @@
         ])
 
         const currentDayEvents = computed(() => itinerary.value[activeTab.value].events)
-        const openMap = (q) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, '_blank')
+        const openMap = (q) => window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q), '_blank')
+        const zoomImg = (url) => zoomedImg.value = url
 
-        return { activeTab, itinerary, currentDayEvents, openMap }
+        return { activeTab, itinerary, currentDayEvents, openMap, zoomedImg, zoomImg }
       }
     }).mount('#app')
   </script>
