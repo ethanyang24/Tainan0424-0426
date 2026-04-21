@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>台南行｜日程表</title>
+  
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            muji: {
+              bg: '#f7f6f2',      // 溫暖的紙張白/米色
+              card: '#ffffff',    // 純白
+              text: '#33322e',    // 柔和的深黑灰色
+              muted: '#8a867d',   // 次要文字灰
+              border: '#e6e4df',  // 淡灰色邊框
+              accent: '#7f1d1d'   // 無印暗紅色 (點綴用)
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #f7f6f2; /* muji-bg */
+      -webkit-tap-highlight-color: transparent;
+    }
+    [v-cloak] {
+      display: none;
+    }
+    /* 隱藏捲軸但保持可捲動 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="text-muji-text antialiased">
+
+  <div id="app" v-cloak class="max-w-md mx-auto bg-muji-bg min-h-screen relative shadow-sm">
+    
+    <header class="bg-muji-card px-6 pt-12 pb-4 sticky top-0 z-10 border-b border-muji-border">
+      <h1 class="text-2xl font-medium tracking-widest text-center text-muji-text">行程計畫</h1>
+      
+      <div class="flex justify-between mt-8">
+        <button 
+          v-for="(day, index) in itinerary" 
+          :key="index"
+          @click="activeTab = index"
+          class="flex-1 pb-3 text-center transition-all duration-300 text-sm tracking-wide"
+          :class="activeTab === index ? 'text-muji-text border-b-2 border-muji-accent font-medium' : 'text-muji-muted border-b-2 border-transparent'"
+        >
+          {{ day.date }} ({{ day.dayOfWeek }})
+        </button>
+      </div>
+    </header>
+
+    <main class="px-6 py-8">
+      <transition-group name="fade" tag="div">
+        <div v-for="(event, index) in currentDayEvents" :key="index" class="relative pl-6 pb-8 last:pb-0">
+          
+          <div class="absolute left-0 top-1 bottom-0 w-px bg-muji-border"></div>
+          <div class="absolute left-[-4px] top-[6px] w-[9px] h-[9px] rounded-full"
+               :class="event.isLocation ? 'bg-muji-text' : 'bg-muji-border'"></div>
+
+          <div class="bg-muji-card border border-muji-border p-4 rounded-sm shadow-sm flex flex-col gap-2">
+            
+            <div class="flex items-center gap-2 text-muji-muted text-xs font-medium tracking-wider">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ event.time }}
+            </div>
+
+            <div class="flex items-start justify-between gap-4 mt-1">
+              <h2 class="text-base font-medium leading-snug">{{ event.title }}</h2>
+              
+              <button 
+                v-if="event.isLocation" 
+                @click="openMap(event.mapQuery)"
+                class="shrink-0 flex items-center justify-center w-8 h-8 rounded bg-muji-bg border border-muji-border text-muji-text hover:bg-gray-100 transition"
+                aria-label="開啟地圖"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            </div>
+            
+            <div v-if="event.desc" class="text-xs text-muji-muted mt-1 leading-relaxed">
+              {{ event.desc }}
+            </div>
+
+          </div>
+        </div>
+      </transition-group>
+    </main>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed } = Vue
+
+    createApp({
+      setup() {
+        const activeTab = ref(0)
+
+        // 行程資料陣列
+        const itinerary = ref([
+          {
+            date: '4/24',
+            dayOfWeek: '五',
+            events: [
+              { time: '18:00', title: '下班回家', isLocation: false },
+              { time: '19:20', title: '騎車出發前往台南市區', isLocation: false },
+              { time: '20:00', title: 'Eureka Bar', isLocation: true, mapQuery: 'Eureka Bar 台南' },
+              { time: '22:00', title: 'Bar often 常酒', isLocation: true, mapQuery: 'Bar often 常酒 台南' },
+              { time: '23:00', title: '阿杰溫體牛肉湯', isLocation: true, mapQuery: '阿杰溫體牛肉湯 台南' },
+              { time: '23:30', title: '搭車返家', isLocation: false },
+              { time: '24:00', title: '溫暖的家', isLocation: false }
+            ]
+          },
+          {
+            date: '4/25',
+            dayOfWeek: '六',
+            events: [
+              { time: '10:00', title: '起床', isLocation: false },
+              { time: '10:20', title: '好鄰．食作', desc: '吃早餐', isLocation: true, mapQuery: '好鄰．食作 台南' },
+              { time: '12:00', title: '前往官田遊客中心', isLocation: false },
+              { time: '13:00', title: '抵達會場 (官田遊客中心)', isLocation: true, mapQuery: '官田遊客中心' },
+              { time: '14:00', title: '逛市集、主舞台表演', isLocation: false },
+              { time: '18:30', title: '熱氣球光雕秀', isLocation: false },
+              { time: '20:00', title: '離開會場', isLocation: false },
+              { time: '21:00', title: '溫暖的家', isLocation: false },
+              { time: '21:10', title: '全聯', desc: '購買明天早餐食材', isLocation: true, mapQuery: '全聯福利中心' }
+            ]
+          },
+          {
+            date: '4/26',
+            dayOfWeek: '日',
+            events: [
+              { time: '09:00', title: '起床', isLocation: false },
+              { time: '10:20', title: '出門上課', isLocation: false },
+              { time: '11:00', title: 'B.P.Y. 220 台南旗艦店', isLocation: true, mapQuery: 'B.P.Y. 220 台南旗艦店' },
+              { time: '12:00', title: '下課', isLocation: false },
+              { time: '13:00', title: 'L’Amour', isLocation: true, mapQuery: 'L’Amour 台南' },
+              { time: '15:00', title: '誠品生活台南店', isLocation: true, mapQuery: '誠品生活台南店' },
+              { time: '19:30', title: '台南運河水岸燈光秀', isLocation: true, mapQuery: '台南運河' },
+              { time: '20:00', title: '返家', isLocation: false },
+              { time: '20:40', title: '溫暖的家', isLocation: false }
+            ]
+          }
+        ])
+
+        const currentDayEvents = computed(() => {
+          return itinerary.value[activeTab.value].events
+        })
+
+        // 開啟 Google Maps 導航
+        const openMap = (query) => {
+          if (!query) return;
+          const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+          window.open(url, '_blank');
+        }
+
+        return {
+          activeTab,
+          itinerary,
+          currentDayEvents,
+          openMap
+        }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>
